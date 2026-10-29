@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Notes App</title>
+<style>
+  :root { --bg:#f5f7fb; --card:#fff; --ink:#1b2a41; --muted:#5b6b82; --line:#dbe3ee; --blue:#2563eb; --red:#b91c1c; --green:#15803d; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#0e1522; --card:#162033; --ink:#e6edf7; --muted:#97a6bd; --line:#26344d; } }
+  * { box-sizing: border-box; }
+  body { margin:0; font:15px/1.5 system-ui, Segoe UI, Roboto, sans-serif; background:var(--bg); color:var(--ink); }
+  header { padding:16px 24px; background:var(--card); border-bottom:1px solid var(--line); display:flex; gap:12px; align-items:center; flex-wrap:wrap; }
+  header h1 { margin:0; font-size:20px; }
+  .pill { font-size:12px; padding:3px 10px; border-radius:999px; border:1px solid var(--line); color:var(--muted); }
+  .pill.ok { color:var(--green); border-color:var(--green); } .pill.bad { color:var(--red); border-color:var(--red); }
+  main { max-width:820px; margin:0 auto; padding:20px; display:grid; gap:16px; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:16px; }
+  input, textarea { width:100%; padding:9px 11px; margin:4px 0 10px; border:1px solid var(--line); border-radius:8px; background:transparent; color:var(--ink); font:inherit; }
+  button { padding:8px 16px; border:0; border-radius:8px; background:var(--blue); color:#fff; font:inherit; font-weight:600; cursor:pointer; }
+  button.del { background:transparent; color:var(--red); border:1px solid var(--line); padding:4px 10px; }
+  .note { border-top:1px solid var(--line); padding:12px 0; display:flex; gap:12px; justify-content:space-between; }
+  .note:first-child { border-top:0; } .note h3 { margin:0 0 2px; font-size:16px; } .note p { margin:0; color:var(--muted); white-space:pre-wrap; }
+  .when { font-size:12px; color:var(--muted); } .err { color:var(--red); font-size:13px; min-height:18px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Notes App</h1>
+  <span class="pill" id="db">database: checking...</span>
+  <span class="pill" id="pod"></span>
+  <span class="pill" id="ver"></span>
+</header>
+<main>
+  <section class="card">
+    <label for="title">Title</label><input id="title" maxlength="100" placeholder="What do you want to remember?">
+    <label for="body">Details (optional)</label><textarea id="body" rows="3" maxlength="2000"></textarea>
+    <button id="add">Add note</button> <span class="err" id="err"></span>
+  </section>
+  <section class="card"><div id="list"></div></section>
+</main>
+<script>
+const $ = (id) => document.getElementById(id);
+const esc = (s) => s.replace(/[&<>"']/g, (c) => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" }[c]));
+
+async function status() {
+  try {
+    const h = await fetch("/health"); const ok = h.ok;
+    $("db").textContent = "database: " + (ok ? "up" : "not ready"); $("db").className = "pill " + (ok ? "ok" : "bad");
+    const i = await (await fetch("/api/info")).json();
+    $("pod").textContent = "served by: " + i.pod; $("ver").textContent = "version: " + i.version;
+  } catch (e) { $("db").textContent = "app unreachable"; $("db").className = "pill bad"; }
+}
+async function load() {
+  try {
+    const r = await fetch("/api/notes"); if (!r.ok) throw new Error("HTTP " + r.status);
+    const notes = await r.json();
+    $("list").innerHTML = notes.length ? notes.map((n) =>
+      `<div class="note"><div><h3>${esc(n.title)}</h3><p>${esc(n.body)}</p><span class="when">${new Date(n.created_at).toLocaleString()}</span></div>` +
+      `<button class="del" data-id="${n.id}">Delete</button></div>`).join("") : "<p class='when'>No notes yet - add the first one.</p>";
+  } catch (e) { $("list").innerHTML = "<p class='err'>Could not load notes: " + esc(e.message) + "</p>"; }
+}
+$("add").onclick = async () => {
+  $("err").textContent = "";
+  const r = await fetch("/api/notes", { method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ title: $("title").value, body: $("body").value }) });
+  if (!r.ok) { $("err").textContent = (await r.json()).error || "failed"; return; }
+  $("title").value = ""; $("body").value = ""; load();
+};
+$("list").onclick = async (e) => {
+  const id = e.target.dataset && e.target.dataset.id; if (!id) return;
+  await fetch("/api/notes/" + id, { method: "DELETE" }); load();
+};
+status(); load(); setInterval(status, 5000);
+</script>
+</body>
+</html>

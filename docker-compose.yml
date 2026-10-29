@@ -1,0 +1,35 @@
+# Local test environment: app + PostgreSQL. Not used for the Kubernetes deployment.
+#   docker compose up -d --build      then open http://localhost:3300
+#   docker compose down -v            stops everything and deletes the database volume
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: notes
+      POSTGRES_USER: notes
+      POSTGRES_PASSWORD: local-dev-only
+    volumes:
+      - notes-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U notes -d notes"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  app:
+    build: .
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DB_HOST: db
+      DB_PORT: "5432"
+      DB_NAME: notes
+      DB_USER: notes
+      DB_PASSWORD: local-dev-only
+      APP_VERSION: compose
+    ports:
+      - "3300:3000"
+
+volumes:
+  notes-data:
