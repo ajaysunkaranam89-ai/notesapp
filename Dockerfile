@@ -1,7 +1,17 @@
-FROM node:20-alpine
+# ---- base: shared layer with the package files ----
+FROM node:20-alpine AS base
 RUN apk upgrade --no-cache
 WORKDIR /app
 COPY package.json package-lock.json ./
+
+# ---- test: install all deps and run the unit tests (Jenkins: docker build --target test) ----
+FROM base AS test
+RUN npm ci
+COPY . .
+RUN npm test
+
+# ---- prod: small runtime image (the default target, so a plain `docker build .` builds this one) ----
+FROM base AS prod
 # npm/yarn are only needed to install dependencies; removing them keeps their bundled (CVE-prone)
 # packages out of the runtime image. The app starts with plain `node`.
 RUN npm ci --omit=dev \

@@ -4,4 +4,6 @@ npm-debug.log
 .gitignore
 docker-compose.yml
 README.md
-test
+k8s
+argocd
+Jenkinsfile
