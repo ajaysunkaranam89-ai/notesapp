@@ -94,8 +94,12 @@ pipeline {
                         sed -i "s|APP_VERSION: \\"[^\\"]*\\"|APP_VERSION: \\"${IMAGE_TAG}\\"|" k8s/configmap.yaml
 
                         git add k8s/deployment.yaml k8s/configmap.yaml
-                        git commit -m "Deploy image ${IMAGE_TAG} [skip ci]"
-                        git push "$REPO_URL" main
+                        if git diff --cached --quiet; then
+                            echo "Manifests already point at tag ${IMAGE_TAG} - nothing to commit."
+                        else
+                            git commit -m "Deploy image ${IMAGE_TAG} [skip ci]"
+                            git push "$REPO_URL" main
+                        fi
                     '''
                 }
             }
