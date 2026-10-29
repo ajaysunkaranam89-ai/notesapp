@@ -1,0 +1,23 @@
+# Argo CD Application: keeps the cluster in sync with the k8s/ folder of this repo.
+# It lives outside k8s/ on purpose, so Argo CD does not try to manage itself.
+# Apply once with:  kubectl apply -f argocd/application.yaml
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: notes-app
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/ajaysunkaranam89-ai/notesapp
+    targetRevision: main
+    path: k8s
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: notes
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

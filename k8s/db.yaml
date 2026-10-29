@@ -1,0 +1,70 @@
+# PostgreSQL: a Service (stable name "notes-db") and a StatefulSet (stable pod + its own persistent volume).
+apiVersion: v1
+kind: Service
+metadata:
+  name: notes-db
+  namespace: notes
+spec:
+  selector:
+    app: notes-db
+  ports:
+    - name: postgres
+      port: 5432
+      targetPort: 5432
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: notes-db
+  namespace: notes
+spec:
+  serviceName: notes-db
+  replicas: 1
+  selector:
+    matchLabels:
+      app: notes-db
+  template:
+    metadata:
+      labels:
+        app: notes-db
+    spec:
+      containers:
+        - name: postgres
+          image: postgres:16-alpine
+          ports:
+            - containerPort: 5432
+          env:
+            - name: POSTGRES_DB
+              value: notes
+            - name: POSTGRES_USER
+              value: notes
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: notes-db-secret
+                  key: POSTGRES_PASSWORD
+            # The volume root contains "lost+found"; initdb refuses a non-empty directory, so use a subfolder.
+            - name: PGDATA
+              value: /var/lib/postgresql/data/pgdata
+          readinessProbe:
+            exec:
+              command: ["pg_isready", "-U", "notes", "-d", "notes"]
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              memory: 384Mi
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/postgresql/data
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 1Gi

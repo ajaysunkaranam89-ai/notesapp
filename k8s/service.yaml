@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: notes-app
+  namespace: notes
+spec:
+  selector:
+    app: notes-app
+  ports:
+    - name: http
+      port: 80
+      targetPort: 3000

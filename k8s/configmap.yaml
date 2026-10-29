@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: notes-config
+  namespace: notes
+data:
+  DB_HOST: notes-db      # must equal the name of the database Service (db.yaml)
+  DB_PORT: "5432"
+  DB_NAME: notes         # must match POSTGRES_DB
+  DB_USER: notes         # must match POSTGRES_USER
+  APP_VERSION: "1"       # shown in the page header; change it to see a config rollout

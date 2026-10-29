@@ -57,6 +57,31 @@ when the volume is mounted at `/var/lib/postgresql/data` (avoids the "lost+found
 
 Limits: `title` 1 to 100 characters, `body` up to 2000 characters.
 
+## Deploy to Kubernetes (`k8s/` folder)
+
+| File | What it creates |
+|---|---|
+| `namespace.yaml` | namespace `notes` |
+| `secret.yaml` | `notes-db-secret` with the database password (**committed on purpose for this lab, see the warning inside**) |
+| `configmap.yaml` | `notes-config`: DB host/port/name/user and `APP_VERSION` |
+| `db.yaml` | PostgreSQL Service `notes-db` + StatefulSet with a 1 Gi persistent volume |
+| `deployment.yaml` | the app, 2 replicas, probes, settings from the ConfigMap and Secret |
+| `service.yaml` | Service `notes-app` (port 80 to container port 3000) |
+
+`argocd/application.yaml` is an Argo CD Application that syncs the `k8s/` folder (apply it once; it is not part of `k8s/`).
+
+```bash
+kubectl apply -f k8s/                                   # create everything
+kubectl get pods -n notes -w                            # wait for 1/1 Running
+kubectl port-forward -n notes svc/notes-app 8098:80     # open http://localhost:8098
+```
+
+Before the first deploy:
+1. The image `localhost:30600/notes-app:1` must exist in the in-cluster registry (build and push it, or let Jenkins do it).
+2. Change the password in `k8s/secret.yaml`. Anything committed to git is visible to everyone who can see the repo.
+
+These manifests were tested on a kind cluster: the app waits for the database, load-balances across pods, and the notes survive deleting the database pod.
+
 ## Run it locally (Docker Compose)
 ```bash
 docker compose up -d --build        # app on http://localhost:3300, PostgreSQL alongside
