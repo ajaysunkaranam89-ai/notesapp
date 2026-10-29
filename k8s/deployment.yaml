@@ -16,7 +16,7 @@ spec:
       containers:
         - name: notes-app
           # Pulled through the in-cluster registry (same pattern as the other apps); Jenkins bumps the tag.
-          image: localhost:30600/notes-app:2
+          image: localhost:30600/notes-app:3
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 3000

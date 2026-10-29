@@ -8,4 +8,4 @@ data:
   DB_PORT: "5432"
   DB_NAME: notes         # must match POSTGRES_DB
   DB_USER: notes         # must match POSTGRES_USER
-  APP_VERSION: "2"       # shown in the page header; change it to see a config rollout
+  APP_VERSION: "3"       # shown in the page header; change it to see a config rollout
